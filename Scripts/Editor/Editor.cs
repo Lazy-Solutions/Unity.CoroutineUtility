@@ -9,11 +9,11 @@ using Object = UnityEngine.Object;
 namespace Lazy.Utility
 {
 
-    public class Editor : UnityEditor.Editor
+    internal class Editor : UnityEditor.Editor
     {
 
-        [CustomEditor(typeof(CoroutineRunner))] internal class Editor1 : Editor { }
-        [CustomEditor(typeof(CoroutineRoot))] internal class Editor2 : Editor { }
+        [CustomEditor(typeof(CoroutineRunner))] public class Editor1 : Editor { }
+        [CustomEditor(typeof(CoroutineRoot))] public class Editor2 : Editor { }
 
         public override void OnInspectorGUI()
         {
