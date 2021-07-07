@@ -21,7 +21,13 @@ void Start()
 
     //Coroutine Utility, runs detached from script and
     //won't stop when scene or object is unloaded
-    Coroutine().StartCoroutine();
+    var coroutine = Coroutine().StartCoroutine();
+
+    //Pauses coroutine (yields null until Resume())
+    coroutine.Pause();
+
+    //Stop coroutine
+    coroutine.Stop();
 
 }
 
