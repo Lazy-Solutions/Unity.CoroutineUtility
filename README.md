@@ -2,6 +2,12 @@
 
 A Unity package that provides some additional functionality to coroutines.
 
+Can be installed through the Unity package manager, using git url:
+```
+https://github.com/Lazy-Solutions/Unity.CoroutineUtility.git
+```
+</br>
+
 ###### CoroutineUtility
 Run coroutines detached from MonoBehaviours and scenes which makes working with coroutines in certain circumstances a lot easier.
 
@@ -9,7 +15,8 @@ Run coroutines detached from MonoBehaviours and scenes which makes working with 
 void Start()
 {
 
-    //Unity, attached with script and will stop when scene or object is unloaded.
+    //Unity, attached with script and will stop when
+    //scene or object is unloaded.
     StartCoroutine(Coroutine());
 
     //Coroutine Utility, runs detached from script and
@@ -32,8 +39,10 @@ Provides functionality to invoke code on main thread. Useful when using tasks or
 async Task Background_Task()
 {
 
-    //Time class cannot be accessed from a thread other than the main thread
-    var currentTime = MainThreadUtility.Invoke(() => Time.time);
+    //Time class cannot be accessed from a thread
+    //other than the main thread
+    var currentTime = MainThreadUtility.Invoke(() => Time.realtimeSinceStartup);
+
     //Do something with time...
 
 }
