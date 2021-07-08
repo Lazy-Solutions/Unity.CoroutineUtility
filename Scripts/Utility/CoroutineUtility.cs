@@ -56,7 +56,7 @@ namespace Lazy.Utility
             var obj = new GameObject();
             obj.transform.SetParent(root.transform);
             var runner = obj.AddComponent<CoroutineRunner>();
-            var c = new GlobalCoroutine(runner, onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), debugText);
+            var c = GlobalCoroutine.Get(runner, onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), debugText);
             runner.Run(coroutine, c);
 
             return c;

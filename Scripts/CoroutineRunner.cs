@@ -19,6 +19,7 @@ namespace Lazy.Utility
                 ? helper.debugText
                 : helper.ToString();
 
+            helper.OnStart();
             StartCoroutine(RunCoroutine(coroutine));
 
             IEnumerator RunCoroutine(IEnumerator c)
