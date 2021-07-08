@@ -1,15 +1,12 @@
-#pragma warning disable IDE0051 // Remove unused private members
-
 using UnityEngine;
 using System.Collections;
 using System;
 using System.Linq;
-
-using Object = UnityEngine.Object;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -18,14 +15,32 @@ using UnityEditor;
 namespace Lazy.Utility
 {
 
-    /// <summary>An utility class that helps with running coroutines unconstrained from <see cref="MonoBehaviour"/>.</summary>
+    /// <summary>An utility class that helps with running coroutines detached from <see cref="MonoBehaviour"/>.</summary>
     public static class CoroutineUtility
     {
 
-        public static Action<GlobalCoroutine> coroutineStarted;
-        public static Action<GlobalCoroutine> coroutineCompleted;
+        /// <summary>Occurs when a <see cref="GlobalCoroutine"/> is started.</summary>
+        public static event Action<GlobalCoroutine> coroutineStarted;
 
-        internal static CoroutineRoot root;
+        /// <summary>Occurs when a <see cref="GlobalCoroutine"/> is completed.</summary>
+        public static event Action<GlobalCoroutine> coroutineCompleted;
+
+        internal static void RaiseCoroutineStarted(GlobalCoroutine coroutine) => coroutineStarted?.Invoke(coroutine);
+        internal static void RaiseCoroutineCompleted(GlobalCoroutine coroutine) => coroutineCompleted?.Invoke(coroutine);
+
+        static CoroutineRunner m_runner;
+        static CoroutineRunner Runner()
+        {
+
+            if (m_runner)
+                return m_runner;
+
+            var obj = new GameObject("Coroutine runner");
+            Object.DontDestroyOnLoad(obj);
+            m_runner = obj.AddComponent<CoroutineRunner>();
+            return m_runner;
+
+        }
 
         /// <summary>
         /// <para>Runs the coroutine using <see cref="CoroutineUtility"/>, which means it won't be tied to this <see cref="MonoBehaviour"/> and will persist through scene close.</para>
@@ -47,17 +62,8 @@ namespace Lazy.Utility
             if (coroutine == null)
                 return null;
 
-            if (!root)
-            {
-                root = new GameObject("Coroutine Runner").AddComponent<CoroutineRoot>();
-                Object.DontDestroyOnLoad(root.gameObject);
-            }
-
-            var obj = new GameObject();
-            obj.transform.SetParent(root.transform);
-            var runner = obj.AddComponent<CoroutineRunner>();
-            var c = GlobalCoroutine.Get(runner, onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), debugText);
-            runner.Run(coroutine, c);
+            var c = GlobalCoroutine.Get(onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), debugText);
+            Runner().Add(coroutine, c);
 
             return c;
 
@@ -94,29 +100,14 @@ namespace Lazy.Utility
             coroutine?.Stop();
 
         /// <summary>Stops all global coroutines.</summary>
-        public static void StopAllCoroutines()
-        {
-            var obj = Object.FindObjectsOfType<CoroutineRoot>();
-            foreach (var o in obj)
-                Object.DestroyImmediate(o.gameObject);
-        }
+        public static void StopAllCoroutines() =>
+            Runner().Clear();
 
-#if UNITY_EDITOR
-        [UnityEditor.Callbacks.DidReloadScripts]
-        static void OnScriptsReloaded()
-        {
-            //Coroutines stop when script and editor state changes, which means that we'll have rogue CoroutineHelper objects in the scene, 
-            //so let's remove them
-            StopAllCoroutines();
-        }
-#endif
-
-        public static IEnumerator WaitAll(params GlobalCoroutine[] coroutines) =>
-            coroutines?.WaitAll();
-
+        /// <summary>Wait for all coroutines to complete.</summary>
         public static IEnumerator WaitAll(params IEnumerator[] coroutines) =>
             coroutines?.WaitAll();
 
+        /// <summary>Wait for all coroutines to complete.</summary>
         public static IEnumerator WaitAll(this IEnumerable<IEnumerator> coroutines, Func<bool> isCancelled = null, string debugText = null)
         {
             var coroutine = coroutines.Select(c => c.StartCoroutine(debugText: debugText)).ToArray();
@@ -132,6 +123,11 @@ namespace Lazy.Utility
             }
         }
 
+        /// <summary>Wait for all coroutines to complete.</summary>
+        public static IEnumerator WaitAll(params GlobalCoroutine[] coroutines) =>
+            coroutines?.WaitAll();
+
+        /// <summary>Wait for all coroutines to complete.</summary>
         public static IEnumerator WaitAll(this GlobalCoroutine[] coroutines, Func<bool> isCancelled = null)
         {
             while (coroutines.Any(c => !c.isComplete))

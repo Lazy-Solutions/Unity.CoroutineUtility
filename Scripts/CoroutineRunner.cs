@@ -1,5 +1,10 @@
 ﻿using System.Collections;
 using UnityEngine;
+using System.Collections.Generic;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Lazy.Utility
 {
@@ -9,23 +14,52 @@ namespace Lazy.Utility
     internal partial class CoroutineRunner : MonoBehaviour
     {
 
-        public GlobalCoroutine coroutine;
+#if UNITY_EDITOR
 
-        public void Run(IEnumerator coroutine, GlobalCoroutine helper)
+        void Start()
         {
 
-            this.coroutine = helper;
-            name = !string.IsNullOrWhiteSpace(helper.debugText)
-                ? helper.debugText
-                : helper.ToString();
+            coroutines = m_coroutines.AsReadOnly();
 
-            helper.OnStart();
-            StartCoroutine(RunCoroutine(coroutine));
+            EditorApplication.playModeStateChanged += (mode) =>
+            {
+                if (mode == PlayModeStateChange.ExitingPlayMode)
+                    if (this && gameObject)
+                        Destroy(gameObject);
+            };
+
+        }
+
+#endif
+
+        readonly List<GlobalCoroutine> m_coroutines = new List<GlobalCoroutine>();
+        public IReadOnlyCollection<GlobalCoroutine> coroutines { get; private set; }
+
+        public void Add(IEnumerator enumerator, GlobalCoroutine coroutine)
+        {
+            m_coroutines.Add(coroutine);
+            Run(enumerator, coroutine);
+        }
+
+        public void Clear()
+        {
+            foreach (var coroutine in coroutines)
+                coroutine.Stop(isCancel: true);
+            m_coroutines.Clear();
+        }
+
+        public void Run(IEnumerator enumerator, GlobalCoroutine coroutine)
+        {
+
+            StartCoroutine(RunCoroutine(enumerator));
 
             IEnumerator RunCoroutine(IEnumerator c)
             {
 
+                coroutine.OnStart();
                 yield return RunSub(c, 0);
+                m_coroutines.Remove(coroutine);
+                coroutine.Stop(isCancel: false);
 
                 IEnumerator RunSub(IEnumerator sub, int level)
                 {
@@ -33,11 +67,11 @@ namespace Lazy.Utility
                     while (sub.MoveNext())
                     {
 
-                        if (helper.isComplete)
+                        if (coroutine.isComplete)
                             yield break;
 
-                        if (helper.isPaused)
-                            while (helper.isPaused)
+                        if (coroutine.isPaused)
+                            while (coroutine.isPaused)
                                 yield return null;
 
                         if (sub.Current is IEnumerator subroutine)
@@ -48,8 +82,6 @@ namespace Lazy.Utility
                     }
 
                 }
-
-                helper.Stop(isCancel: false);
 
             }
 

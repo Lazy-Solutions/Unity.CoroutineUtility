@@ -14,6 +14,9 @@ namespace Lazy.Utility
     public static class MainThreadUtility
     {
 
+        /// <summary>Gets whatever <see cref="MainThreadUtility"/> is enabled, set to <see langword="false"/> in source code to disable.</summary>
+        public static bool isEnabled => true;
+
         #region Invoke
 
         /// <summary>Queues the function to be run on the main thread, during the next frame.</summary>
