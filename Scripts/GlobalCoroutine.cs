@@ -99,11 +99,19 @@ namespace Lazy.Utility
         /// <summary>Stops the coroutine.</summary>
         internal void Stop(bool isCancel)
         {
+
+            if (isComplete)
+                return;
+
+            if (CoroutineUtility.m_runner)
+                CoroutineUtility.m_runner.Stop(this);
+
             wasCancelled = isCancel;
             isComplete = true;
             isRunning = false;
             CoroutineUtility.RaiseCoroutineCompleted(this);
             onComplete?.Invoke();
+
         }
 
         /// <inheritdoc cref="Object.ToString"/>/>

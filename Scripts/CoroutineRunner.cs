@@ -19,8 +19,6 @@ namespace Lazy.Utility
         void Start()
         {
 
-            coroutines = m_coroutines.AsReadOnly();
-
             EditorApplication.playModeStateChanged += (mode) =>
             {
                 if (mode == PlayModeStateChange.ExitingPlayMode)
@@ -32,12 +30,12 @@ namespace Lazy.Utility
 
 #endif
 
-        readonly List<GlobalCoroutine> m_coroutines = new List<GlobalCoroutine>();
-        public IReadOnlyCollection<GlobalCoroutine> coroutines { get; private set; }
+        readonly Dictionary<GlobalCoroutine, Coroutine> m_coroutines = new Dictionary<GlobalCoroutine, Coroutine>();
+        public IReadOnlyCollection<GlobalCoroutine> coroutines => m_coroutines.Keys;
 
         public void Add(IEnumerator enumerator, GlobalCoroutine coroutine)
         {
-            m_coroutines.Add(coroutine);
+            m_coroutines.Add(coroutine, null);
             Run(enumerator, coroutine);
         }
 
@@ -48,10 +46,19 @@ namespace Lazy.Utility
             m_coroutines.Clear();
         }
 
+        internal void Stop(GlobalCoroutine coroutine)
+        {
+            if (m_coroutines.TryGetValue(coroutine, out var c))
+            {
+                StopCoroutine(c);
+                m_coroutines.Remove(coroutine);
+            }
+        }
+
         public void Run(IEnumerator enumerator, GlobalCoroutine coroutine)
         {
 
-            StartCoroutine(RunCoroutine(enumerator));
+            m_coroutines[coroutine] = StartCoroutine(RunCoroutine(enumerator));
 
             IEnumerator RunCoroutine(IEnumerator c)
             {

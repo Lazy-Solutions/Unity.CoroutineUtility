@@ -28,7 +28,7 @@ namespace Lazy.Utility
         internal static void RaiseCoroutineStarted(GlobalCoroutine coroutine) => coroutineStarted?.Invoke(coroutine);
         internal static void RaiseCoroutineCompleted(GlobalCoroutine coroutine) => coroutineCompleted?.Invoke(coroutine);
 
-        static CoroutineRunner m_runner;
+        internal static CoroutineRunner m_runner;
         static CoroutineRunner Runner()
         {
 
