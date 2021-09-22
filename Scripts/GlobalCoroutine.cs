@@ -110,7 +110,6 @@ namespace Lazy.Utility
         internal void OnStart()
         {
             isRunning = true;
-            //CoroutineUtility.RaiseCoroutineStarted(this);
         }
 
         /// <summary>Stops the coroutine.</summary>
@@ -137,7 +136,7 @@ namespace Lazy.Utility
 
             if (CoroutineUtility.Events.enableEvents)
                 CoroutineUtility.Events.onStopped?.Invoke(this);
-            //CoroutineUtility.RaiseCoroutineCompleted(this);
+
             onComplete?.Invoke();
 
         }
