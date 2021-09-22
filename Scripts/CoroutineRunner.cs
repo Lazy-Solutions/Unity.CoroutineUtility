@@ -77,7 +77,10 @@ namespace Lazy.Utility
                 m_coroutines.Remove(coroutine);
 
                 if (CoroutineUtility.Events.enableEvents)
+                {
                     CoroutineUtility.Events.onCoroutineFrameEnd(coroutine, rootUserData);
+                    CoroutineUtility.Events.onCoroutineEnded(coroutine);
+                }
 
                 coroutine.Stop(isCancel: false);
 
@@ -115,10 +118,7 @@ namespace Lazy.Utility
                             yield return sub.Current;
 
                         if (CoroutineUtility.Events.enableEvents)
-                        {
                             CoroutineUtility.Events.onCoroutineFrameEnd?.Invoke(coroutine, userData);
-                            CoroutineUtility.Events.onCoroutineEnded?.Invoke(coroutine);
-                        }
 
                     }
 
