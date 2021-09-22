@@ -69,7 +69,7 @@ namespace Lazy.Utility
                 if (CoroutineUtility.Events.enableEvents)
                 {
                     CoroutineUtility.Events.onCoroutineStarted?.Invoke(coroutine);
-                    rootUserData = CoroutineUtility.Events.onCoroutineFrameStart?.Invoke(coroutine, null, level: 0, null, isPause: false);
+                    rootUserData = CoroutineUtility.Events.onSubroutineStart?.Invoke(coroutine, null, level: 0, null, isPause: false);
                 }
 
                 yield return RunSub(c, 0, rootUserData);
@@ -78,7 +78,7 @@ namespace Lazy.Utility
 
                 if (CoroutineUtility.Events.enableEvents)
                 {
-                    CoroutineUtility.Events.onCoroutineFrameEnd(coroutine, rootUserData);
+                    CoroutineUtility.Events.onSubroutineEnd(coroutine, rootUserData);
                     CoroutineUtility.Events.onCoroutineEnded(coroutine);
                 }
 
@@ -97,19 +97,19 @@ namespace Lazy.Utility
                         {
 
                             var pauseUserData = CoroutineUtility.Events.enableEvents
-                                ? CoroutineUtility.Events.onCoroutineFrameStart?.Invoke(coroutine, null, level, parentUserData, isPause: true)
+                                ? CoroutineUtility.Events.onSubroutineStart?.Invoke(coroutine, null, level, parentUserData, isPause: true)
                                 : null;
 
                             while (coroutine.isPaused)
                                 yield return null;
 
                             if (CoroutineUtility.Events.enableEvents)
-                                CoroutineUtility.Events.onCoroutineFrameEnd?.Invoke(coroutine, pauseUserData);
+                                CoroutineUtility.Events.onSubroutineEnd?.Invoke(coroutine, pauseUserData);
 
                         }
 
                         var userData = CoroutineUtility.Events.enableEvents
-                            ? CoroutineUtility.Events.onCoroutineFrameStart?.Invoke(coroutine, sub.Current, level + 1, parentUserData, isPause: false)
+                            ? CoroutineUtility.Events.onSubroutineStart?.Invoke(coroutine, sub.Current, level + 1, parentUserData, isPause: false)
                             : null;
 
                         if (sub.Current is IEnumerator subroutine)
@@ -118,7 +118,7 @@ namespace Lazy.Utility
                             yield return sub.Current;
 
                         if (CoroutineUtility.Events.enableEvents)
-                            CoroutineUtility.Events.onCoroutineFrameEnd?.Invoke(coroutine, userData);
+                            CoroutineUtility.Events.onSubroutineEnd?.Invoke(coroutine, userData);
 
                     }
 

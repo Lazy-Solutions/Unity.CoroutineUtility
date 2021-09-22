@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Reflection;
 using System.Collections;
+using System.Reflection;
 using UnityEngine;
 using Object = UnityEngine.Object;
-//using AdvancedSceneManager.Callbacks;
-
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace Lazy.Utility
 {
@@ -66,9 +61,6 @@ namespace Lazy.Utility
 
         #endregion
 
-        ///// <summary>The diagnostics tracker for this coroutine. Null if outside of editor.</summary>
-        //public CoroutineDiagHelper diag { get; private set; }
-
         /// <summary>The callback that is executed when coroutine is finished.</summary>
         public Action onComplete { get; private set; }
 
@@ -126,16 +118,12 @@ namespace Lazy.Utility
             if (CoroutineUtility.m_runner)
                 CoroutineUtility.m_runner.Stop(this);
 
-            //#if UNITY_EDITOR
-            //            diag?.End();
-            //#endif
-
             wasCancelled = isCancel;
             isComplete = true;
             isRunning = false;
 
             if (CoroutineUtility.Events.enableEvents)
-                CoroutineUtility.Events.onStopped?.Invoke(this);
+                CoroutineUtility.Events.onCoroutineEnded?.Invoke(this);
 
             onComplete?.Invoke();
 
@@ -155,8 +143,8 @@ namespace Lazy.Utility
                 ? caller.file.Substring(caller.file.IndexOf("/Packages/") + 1)
                 : "Assets" + caller.file.Replace(Application.dataPath, "");
 
-            if (AssetDatabase.LoadAssetAtPath<Object>(relativePath))
-                AssetDatabase.OpenAsset(AssetDatabase.LoadAssetAtPath<MonoScript>(relativePath), caller.line, 0);
+            if (UnityEditor.AssetDatabase.LoadAssetAtPath<Object>(relativePath))
+                UnityEditor.AssetDatabase.OpenAsset(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(relativePath), caller.line, 0);
             else
                 Debug.LogError($"Could not find '{relativePath}'");
 
