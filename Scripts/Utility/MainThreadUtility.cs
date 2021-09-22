@@ -73,7 +73,7 @@ namespace Lazy.Utility
         public static void Start()
         {
             if (!IsRunning)
-                coroutine = Coroutine().StartCoroutine(debugText: "Main Thread Dispatcher");
+                coroutine = Coroutine().StartCoroutine(description: "Main Thread Dispatcher");
         }
 
         /// <summary>Stops main thread utility coroutine.</summary>

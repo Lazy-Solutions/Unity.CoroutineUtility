@@ -5,19 +5,20 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace Lazy.Utility
+namespace Lazy.Utility.Editor
 {
 
     [CustomEditor(typeof(CoroutineRunner))]
-    internal class CoroutineRunnerEditor : Editor
+    internal class CoroutineRunnerEditor : UnityEditor.Editor
     {
 
-        void OnEnable() => CoroutineUtility.coroutineCompleted += CoroutineUtility_coroutineCompleted;
-        void OnDisable() => CoroutineUtility.coroutineCompleted -= CoroutineUtility_coroutineCompleted;
+        void OnEnable() => CoroutineUtility.Events.onCoroutineStarted += CoroutineUtility_coroutineCompleted;
+        void OnDisable() => CoroutineUtility.Events.onCoroutineEnded -= CoroutineUtility_coroutineCompleted;
 
         void CoroutineUtility_coroutineCompleted(GlobalCoroutine couroutine) => Repaint();
 
         static readonly Dictionary<(MethodBase method, string file, int line), bool> expanded = new Dictionary<(MethodBase method, string file, int line), bool>();
+
         public override void OnInspectorGUI()
         {
 
@@ -37,9 +38,9 @@ namespace Lazy.Utility
             if (!expanded.ContainsKey(coroutine.caller))
                 expanded.Add(coroutine.caller, false);
 
-            var header = string.IsNullOrWhiteSpace(coroutine.debugText)
+            var header = string.IsNullOrWhiteSpace(coroutine.description)
                     ? coroutine.caller.method?.Name
-                    : coroutine.debugText;
+                    : coroutine.description;
 
             if (coroutine.isPaused)
                 header += " [Paused]";

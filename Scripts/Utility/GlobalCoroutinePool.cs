@@ -12,10 +12,10 @@ namespace Lazy.Utility
         static readonly List<GlobalCoroutine> pool = new List<GlobalCoroutine>();
 
         /// <summary>Gets a recycled instance of <see cref="GlobalCoroutine"/>, if none exist, a new instance will be created.</summary>
-        internal static GlobalCoroutine Get(Action onComplete, (MethodBase method, string file, int line) caller, string debugText)
+        internal static GlobalCoroutine Get(Action onComplete, (MethodBase method, string file, int line) caller, string description)
         {
             Get(out var coroutine);
-            coroutine.Construct(onComplete, caller, debugText);
+            coroutine.Construct(onComplete, caller, description);
             return coroutine;
         }
 
@@ -26,13 +26,21 @@ namespace Lazy.Utility
         //Retreive or create instance
         static void Get(out GlobalCoroutine coroutine)
         {
+
+            coroutine = null;
+
+            if (pool.Contains(null))
+                pool.RemoveAll(obj => obj == null);
+
             if (pool.Any())
             {
                 coroutine = pool[0];
                 pool.RemoveAt(0);
             }
-            else
+
+            if (coroutine is null)
                 coroutine = new GlobalCoroutine();
+
         }
 
     }

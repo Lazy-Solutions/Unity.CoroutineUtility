@@ -1,16 +1,12 @@
-using UnityEngine;
-using System.Collections;
 using System;
-using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using UnityEngine;
 using Object = UnityEngine.Object;
-
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace Lazy.Utility
 {
@@ -19,14 +15,40 @@ namespace Lazy.Utility
     public static class CoroutineUtility
     {
 
-        /// <summary>Occurs when a <see cref="GlobalCoroutine"/> is started.</summary>
-        public static event Action<GlobalCoroutine> coroutineStarted;
+        public static class Events
+        {
 
-        /// <summary>Occurs when a <see cref="GlobalCoroutine"/> is completed.</summary>
-        public static event Action<GlobalCoroutine> coroutineCompleted;
+            static bool m_enableEvents;
+            /// <summary>Enables or disables events. Setter not available, and getter always returns false, in build. Default is <see langword="false"/>.</summary>
+            public static bool enableEvents
+            {
+                get
+                {
+#if UNITY_EDITOR
+                    return m_enableEvents;
+#else
+                    return false;
+#endif
+                }
+#if UNITY_EDITOR
+                set => m_enableEvents = value;
+#endif
+            }
 
-        internal static void RaiseCoroutineStarted(GlobalCoroutine coroutine) => coroutineStarted?.Invoke(coroutine);
-        internal static void RaiseCoroutineCompleted(GlobalCoroutine coroutine) => coroutineCompleted?.Invoke(coroutine);
+            public delegate void CoroutineEvent(GlobalCoroutine coroutine);
+            public delegate object CoroutineFrameStartEvent(GlobalCoroutine coroutine, object data, int level, object parentUserData, bool isPause);
+            public delegate object CoroutineFrameEndEvent(GlobalCoroutine coroutine, object userData);
+
+            public static CoroutineEvent onCreated;
+            public static CoroutineEvent onDestroyed;
+            public static CoroutineEvent onStopped;
+
+            public static CoroutineEvent onCoroutineStarted;
+            public static CoroutineEvent onCoroutineEnded;
+            public static CoroutineFrameStartEvent onCoroutineFrameStart;
+            public static CoroutineFrameEndEvent onCoroutineFrameEnd;
+
+        }
 
         internal static CoroutineRunner m_runner;
         static CoroutineRunner Runner()
@@ -46,14 +68,14 @@ namespace Lazy.Utility
         /// <para>Runs the coroutine using <see cref="CoroutineUtility"/>, which means it won't be tied to this <see cref="MonoBehaviour"/> and will persist through scene close.</para>
         /// <para>You may yield return this method.</para>
         /// </summary>
-        public static GlobalCoroutine StartCoroutineGlobal(this MonoBehaviour _, IEnumerator coroutine, Action onComplete = null, string debugText = "", [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0) =>
-            StartCoroutine(coroutine, onComplete, debugText, callerFile, callerLine);
+        public static GlobalCoroutine StartCoroutineGlobal(this MonoBehaviour _, IEnumerator coroutine, Action onComplete = null, string description = "", [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0) =>
+            StartCoroutine(coroutine, onComplete, description, callerFile, callerLine);
 
         /// <summary>
         /// <para>Runs the coroutine using <see cref="CoroutineUtility"/>, which means it won't be tied to this <see cref="MonoBehaviour"/> and will persist through scene close.</para>
         /// <para>You may yield return this method.</para>
         /// </summary>
-        public static GlobalCoroutine StartCoroutine(this IEnumerator coroutine, Action onComplete = null, string debugText = "", [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0)
+        public static GlobalCoroutine StartCoroutine(this IEnumerator coroutine, Action onComplete = null, string description = "", [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0)
         {
 
             if (!Application.isPlaying)
@@ -62,7 +84,7 @@ namespace Lazy.Utility
             if (coroutine == null)
                 return null;
 
-            var c = GlobalCoroutine.Get(onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), debugText);
+            var c = GlobalCoroutine.Get(onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), description);
             Runner().Add(coroutine, c);
 
             return c;
@@ -110,7 +132,7 @@ namespace Lazy.Utility
         /// <summary>Wait for all coroutines to complete.</summary>
         public static IEnumerator WaitAll(this IEnumerable<IEnumerator> coroutines, Func<bool> isCancelled = null, string debugText = null)
         {
-            var coroutine = coroutines.Select(c => c.StartCoroutine(debugText: debugText)).ToArray();
+            var coroutine = coroutines.Select(c => c.StartCoroutine(description: debugText)).ToArray();
             while (coroutine.Any(c => !c.isComplete))
             {
                 if (isCancelled?.Invoke() ?? false)

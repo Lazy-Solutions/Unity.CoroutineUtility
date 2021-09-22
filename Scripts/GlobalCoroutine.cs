@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Collections;
 using UnityEngine;
 using Object = UnityEngine.Object;
+//using AdvancedSceneManager.Callbacks;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -18,8 +19,8 @@ namespace Lazy.Utility
         #region Pooled construction
 
         /// <summary>Gets <see cref="GlobalCoroutine"/> from pool.</summary>
-        internal static GlobalCoroutine Get(Action onComplete, (MethodBase method, string file, int line) caller, string debugText) =>
-            GlobalCoroutinePool.Get(onComplete, caller, debugText);
+        internal static GlobalCoroutine Get(Action onComplete, (MethodBase method, string file, int line) caller, string description) =>
+            GlobalCoroutinePool.Get(onComplete, caller, description);
 
         /// <summary>Don't use this, <see cref="GlobalCoroutine"/> is pooled using <see cref="GlobalCoroutinePool"/>. Use <see cref="Get"/> instead.</summary>
         internal GlobalCoroutine()
@@ -27,17 +28,34 @@ namespace Lazy.Utility
 
         /// <summary>Clears out the fields of this <see cref="GlobalCoroutine"/>, used to prepare before returning to <see cref="GlobalCoroutinePool"/>.</summary>
         internal void Clear() =>
-            Construct(null, default, null);
+            ConstructInternal(null, default, null, isDestroy: true);
 
         /// <summary>'Constructs' an instance of <see cref="GlobalCoroutine"/>, <see cref="GlobalCoroutine"/> is pooled using <see cref="GlobalCoroutinePool"/>, this means the instances are recycled, so instead of using constructor, we call this.</summary>
-        internal void Construct(Action onComplete, (MethodBase method, string file, int line) caller, string debugText)
+        internal void Construct(Action onComplete, (MethodBase method, string file, int line) caller, string description/*, bool enableDiag = false*/) =>
+            ConstructInternal(onComplete, caller, description, isDestroy: false);
+
+        void ConstructInternal(Action onComplete, (MethodBase method, string file, int line) caller, string description, bool isDestroy)
         {
+
             this.onComplete = onComplete;
             isPaused = false;
             isComplete = false;
             wasCancelled = false;
             this.caller = caller;
-            this.debugText = debugText;
+            this.description = description;
+
+            if (CoroutineUtility.Events.enableEvents)
+                if (!isDestroy)
+                    CoroutineUtility.Events.onCreated?.Invoke(this);
+                else if (isDestroy)
+                    CoroutineUtility.Events.onDestroyed?.Invoke(this);
+
+            //#if UNITY_EDITOR
+            //            diag = enableDiag.HasValue
+            //                ? new CoroutineDiagHelper(enableDiag.Value, (caller.method, caller.file, caller.line, debugText))
+            //                : null;
+            //#endif
+
         }
 
         ~GlobalCoroutine()
@@ -47,6 +65,9 @@ namespace Lazy.Utility
         }
 
         #endregion
+
+        ///// <summary>The diagnostics tracker for this coroutine. Null if outside of editor.</summary>
+        //public CoroutineDiagHelper diag { get; private set; }
 
         /// <summary>The callback that is executed when coroutine is finished.</summary>
         public Action onComplete { get; private set; }
@@ -67,7 +88,7 @@ namespace Lazy.Utility
         public (MethodBase method, string file, int line) caller { get; private set; }
 
         /// <summary>Gets the user defined message that was associated with this coroutine.</summary>
-        public string debugText { get; private set; }
+        public string description { get; private set; }
 
         /// <summary><see cref="CustomYieldInstruction.keepWaiting"/>, this is how unity knows if this coroutine is done or not.</summary>
         public override bool keepWaiting => !isComplete;
@@ -86,10 +107,10 @@ namespace Lazy.Utility
                 isPaused = false;
         }
 
-        public void OnStart()
+        internal void OnStart()
         {
             isRunning = true;
-            CoroutineUtility.RaiseCoroutineStarted(this);
+            //CoroutineUtility.RaiseCoroutineStarted(this);
         }
 
         /// <summary>Stops the coroutine.</summary>
@@ -106,10 +127,17 @@ namespace Lazy.Utility
             if (CoroutineUtility.m_runner)
                 CoroutineUtility.m_runner.Stop(this);
 
+            //#if UNITY_EDITOR
+            //            diag?.End();
+            //#endif
+
             wasCancelled = isCancel;
             isComplete = true;
             isRunning = false;
-            CoroutineUtility.RaiseCoroutineCompleted(this);
+
+            if (CoroutineUtility.Events.enableEvents)
+                CoroutineUtility.Events.onStopped?.Invoke(this);
+            //CoroutineUtility.RaiseCoroutineCompleted(this);
             onComplete?.Invoke();
 
         }
@@ -119,7 +147,7 @@ namespace Lazy.Utility
             caller.ToString();
 
 #if UNITY_EDITOR
-        /// <summary>View caller in code editor, only accessible from editor.</summary>
+        /// <summary>View caller in code editor, only accessible in editor.</summary>
         public void ViewCallerInCodeEditor()
         {
 
