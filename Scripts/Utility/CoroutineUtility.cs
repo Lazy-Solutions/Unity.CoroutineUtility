@@ -37,7 +37,7 @@ namespace Lazy.Utility
 
             public delegate void CoroutineEvent(GlobalCoroutine coroutine);
             public delegate object CoroutineFrameStartEvent(GlobalCoroutine coroutine, object data, int level, object parentUserData, bool isPause);
-            public delegate object CoroutineFrameEndEvent(GlobalCoroutine coroutine, object userData);
+            public delegate void CoroutineFrameEndEvent(GlobalCoroutine coroutine, object userData);
 
             public static CoroutineEvent onCreated;
             public static CoroutineEvent onDestroyed;
