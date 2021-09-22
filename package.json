@@ -2,7 +2,7 @@
   "name": "utility.lazy.coroutines",
   "version": "1.0.0",
   "displayName": "Coroutine Utility",
-  "description": "This package adds functionality to run coroutines separate from a MonoBehaviours and scenes.",
+  "description": "This package adds functionality to run coroutines separate from a MonoBehaviours and scenes.\n\nThis package is a dependency of Advanced Scene Manager, and will be reinstalled if removed.",
   "unity": "2019.1",
   "keywords": [
     "coroutine",
