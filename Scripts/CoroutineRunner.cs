@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using UnityEngine;
 using System.Collections.Generic;
-//using AdvancedSceneManager.Callbacks;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -66,11 +65,6 @@ namespace Lazy.Utility
 
                 coroutine.OnStart();
 
-                //CoroutineDiagHelper.SubroutineDetails diagRoot = null;
-                //#if UNITY_EDITOR
-                //                diagRoot = coroutine.diag?.Log(c, level: 0, null);
-                //#endif
-
                 object rootUserData = null;
                 if (CoroutineUtility.Events.enableEvents)
                 {
@@ -84,9 +78,7 @@ namespace Lazy.Utility
 
                 if (CoroutineUtility.Events.enableEvents)
                     CoroutineUtility.Events.onCoroutineFrameEnd(coroutine, rootUserData);
-                //#if UNITY_EDITOR
-                //                diagRoot?.End();
-                //#endif
+
                 coroutine.Stop(isCancel: false);
 
                 IEnumerator RunSub(IEnumerator sub, int level, object parentUserData)
@@ -104,27 +96,18 @@ namespace Lazy.Utility
                             var pauseUserData = CoroutineUtility.Events.enableEvents
                                 ? CoroutineUtility.Events.onCoroutineFrameStart?.Invoke(coroutine, null, level, parentUserData, isPause: true)
                                 : null;
-                            //#if UNITY_EDITOR
-                            //                            var pauseDiag = coroutine.diag?.Log("[Pause]", level, parent);
-                            //#endif
+
                             while (coroutine.isPaused)
                                 yield return null;
 
                             if (CoroutineUtility.Events.enableEvents)
                                 CoroutineUtility.Events.onCoroutineFrameEnd?.Invoke(coroutine, pauseUserData);
-                            //#if UNITY_EDITOR
-                            //                            pauseDiag?.End();
-                            //#endif
+
                         }
 
                         var userData = CoroutineUtility.Events.enableEvents
                             ? CoroutineUtility.Events.onCoroutineFrameStart?.Invoke(coroutine, sub.Current, level + 1, parentUserData, isPause: false)
                             : null;
-
-                        //                        CoroutineDiagHelper.SubroutineDetails diag = null;
-                        //#if UNITY_EDITOR
-                        //                        diag = coroutine.diag?.Log(sub.Current, level + 1, parent);
-                        //#endif
 
                         if (sub.Current is IEnumerator subroutine)
                             yield return RunSub(subroutine, level + 1, userData);
@@ -132,10 +115,10 @@ namespace Lazy.Utility
                             yield return sub.Current;
 
                         if (CoroutineUtility.Events.enableEvents)
+                        {
                             CoroutineUtility.Events.onCoroutineFrameEnd?.Invoke(coroutine, userData);
-                        //#if UNITY_EDITOR
-                        //                        diag?.End();
-                        //#endif
+                            CoroutineUtility.Events.onCoroutineEnded?.Invoke(coroutine);
+                        }
 
                     }
 
