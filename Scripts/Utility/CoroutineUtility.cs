@@ -133,12 +133,13 @@ namespace Lazy.Utility
 
 #if UNITY_WEBGL
             return null;
-#endif
+#else
             var stackTrace = new StackTrace();
             var stackFrames = stackTrace.GetFrames();
             var callingFrame = stackFrames[2];
 
             return callingFrame.GetMethod();
+#endif
 
         }
 
