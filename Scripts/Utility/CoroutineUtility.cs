@@ -131,6 +131,9 @@ namespace Lazy.Utility
         static MethodBase GetCaller()
         {
 
+#if UNITY_WEBGL
+            return null;
+#endif
             var stackTrace = new StackTrace();
             var stackFrames = stackTrace.GetFrames();
             var callingFrame = stackFrames[2];
