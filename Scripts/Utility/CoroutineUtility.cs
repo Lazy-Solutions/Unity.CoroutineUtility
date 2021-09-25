@@ -86,6 +86,19 @@ namespace Lazy.Utility
 
         }
 
+        /// <summary>Runs the action after the specified time.</summary>
+        public static void Run(Action action, TimeSpan after)
+        {
+
+            Coroutine()?.StartCoroutine();
+            IEnumerator Coroutine()
+            {
+                yield return new WaitForSeconds((float)after.TotalSeconds);
+                action?.Invoke();
+            }
+
+        }
+
         /// <summary>
         /// <para>Runs the coroutine using <see cref="CoroutineUtility"/>, which means it won't be tied to this <see cref="MonoBehaviour"/> and will persist through scene close.</para>
         /// <para>You may yield return this method.</para>
