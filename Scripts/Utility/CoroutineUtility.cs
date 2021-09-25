@@ -91,13 +91,16 @@ namespace Lazy.Utility
             Run(action, (float)after.TotalSeconds);
 
         /// <summary>Runs the action after the specified time.</summary>
-        public static void Run(Action action, float after)
+        public static void Run(Action action, float? after = null, bool nextFrame = false)
         {
 
             Coroutine()?.StartCoroutine();
             IEnumerator Coroutine()
             {
-                yield return new WaitForSeconds(after);
+                if (after.HasValue)
+                    yield return new WaitForSeconds(after.Value);
+                else if (nextFrame)
+                    yield return null;
                 action?.Invoke();
             }
 
