@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System;
+using System.Reflection;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -37,7 +38,10 @@ namespace Lazy.Utility
         public void Add(IEnumerator enumerator, GlobalCoroutine coroutine)
         {
             m_coroutines.Add(coroutine, null);
-            Run(enumerator, coroutine);
+            m_coroutines[coroutine] = StartCoroutine(RunCoroutine(
+                enumerator,
+                coroutine,
+                onDone: () => m_coroutines.Remove(coroutine)));
         }
 
         public void Clear()
@@ -56,9 +60,27 @@ namespace Lazy.Utility
             }
         }
 
-        public void Run(IEnumerator enumerator, GlobalCoroutine coroutine)
+        static Type EditorWaitForSecondsType { get; } =
+            Type.GetType($"Unity.EditorCoroutines.Editor.EditorWaitForSeconds, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
+
+        static object ConvertRuntimeYieldInstructionsToEditor(object obj)
         {
-            m_coroutines[coroutine] = StartCoroutine(RunCoroutine(enumerator, coroutine, onDone: () => m_coroutines.Remove(coroutine)));
+#if UNITY_EDITOR
+
+            if (Application.isPlaying || EditorWaitForSecondsType == null)
+                return obj;
+
+            if (obj is WaitForSeconds waitForSeconds && typeof(WaitForSeconds).GetField("m_Seconds", BindingFlags.NonPublic | BindingFlags.GetField)?.GetValue(waitForSeconds) is int time)
+                return Activator.CreateInstance(EditorWaitForSecondsType, new[] { time });
+            else if (obj is WaitForSecondsRealtime waitForSecondsRealtime)
+                return Activator.CreateInstance(EditorWaitForSecondsType, new[] { waitForSecondsRealtime.waitTime });
+
+            return obj;
+
+#else
+            return obj;
+#endif
+
         }
 
         public static IEnumerator RunCoroutine(IEnumerator c, GlobalCoroutine coroutine, Action onDone = null)
@@ -116,7 +138,7 @@ namespace Lazy.Utility
                     if (sub.Current is IEnumerator subroutine)
                         yield return RunSub(subroutine, level + 1, userData);
                     else
-                        yield return sub.Current;
+                        yield return ConvertRuntimeYieldInstructionsToEditor(sub.Current);
 
                     if (CoroutineUtility.Events.enableEvents)
                         CoroutineUtility.Events.onSubroutineEnd?.Invoke(coroutine, userData);
