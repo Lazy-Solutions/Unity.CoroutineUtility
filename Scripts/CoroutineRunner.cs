@@ -60,29 +60,6 @@ namespace Lazy.Utility
             }
         }
 
-        static Type EditorWaitForSecondsType { get; } =
-            Type.GetType($"Unity.EditorCoroutines.Editor.EditorWaitForSeconds, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
-
-        static object ConvertRuntimeYieldInstructionsToEditor(object obj)
-        {
-#if UNITY_EDITOR
-
-            if (Application.isPlaying || EditorWaitForSecondsType == null)
-                return obj;
-
-            if (obj is WaitForSeconds waitForSeconds && typeof(WaitForSeconds).GetField("m_Seconds", BindingFlags.NonPublic | BindingFlags.GetField)?.GetValue(waitForSeconds) is int time)
-                return Activator.CreateInstance(EditorWaitForSecondsType, new[] { time });
-            else if (obj is WaitForSecondsRealtime waitForSecondsRealtime)
-                return Activator.CreateInstance(EditorWaitForSecondsType, new[] { waitForSecondsRealtime.waitTime });
-
-            return obj;
-
-#else
-            return obj;
-#endif
-
-        }
-
         public static IEnumerator RunCoroutine(IEnumerator c, GlobalCoroutine coroutine, Action onDone = null)
         {
 
@@ -146,6 +123,28 @@ namespace Lazy.Utility
                 }
 
             }
+
+        }
+
+        static Type EditorWaitForSecondsType { get; } =
+            Type.GetType($"Unity.EditorCoroutines.Editor.EditorWaitForSeconds, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
+
+        static object ConvertRuntimeYieldInstructionsToEditor(object obj)
+        {
+
+#if UNITY_EDITOR
+
+            if (Application.isPlaying || EditorWaitForSecondsType == null)
+                return obj;
+
+            if (obj is WaitForSeconds waitForSeconds && typeof(WaitForSeconds).GetField("m_Seconds", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance)?.GetValue(waitForSeconds) is float time)
+                return Activator.CreateInstance(EditorWaitForSecondsType, new object[] { time });
+            else if (obj is WaitForSecondsRealtime waitForSecondsRealtime)
+                return Activator.CreateInstance(EditorWaitForSecondsType, new object[] { waitForSecondsRealtime.waitTime });
+
+#endif
+
+            return obj;
 
         }
 
