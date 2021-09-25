@@ -100,14 +100,17 @@ namespace Lazy.Utility
         public static GlobalCoroutine StartCoroutine(this IEnumerator coroutine, Action onComplete = null, string description = "", [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0)
         {
 
-            if (!Application.isPlaying)
-                return null;
-
             if (coroutine == null)
                 return null;
 
             var c = GlobalCoroutine.Get(onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), description);
-            Runner().Add(coroutine, c);
+
+            if (Application.isPlaying)
+                Runner().Add(coroutine, c);
+            else
+                Type.GetType("Unity.EditorCoroutines.Editor.EditorCoroutineUtility", throwOnError: false)?.
+                    GetMethod("StartCoroutineOwnerless")?.
+                    Invoke(null, new[] { CoroutineRunner.RunCoroutine(coroutine, c) });
 
             return c;
 
