@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace Lazy.Utility
@@ -105,7 +104,7 @@ namespace Lazy.Utility
         static void Update()
         {
 
-            if (!executeOnMainThread.Any())
+            if (executeOnMainThread.Count == 0)
                 return;
 
             executeCopiedOnMainThread.Clear();
@@ -115,8 +114,8 @@ namespace Lazy.Utility
                 executeOnMainThread.Clear();
             }
 
-            for (int i = 0; i < executeCopiedOnMainThread.Count; i++)
-                executeCopiedOnMainThread[i]?.Invoke();
+            foreach (var action in executeCopiedOnMainThread.ToArray())
+                action?.Invoke();
 
         }
 
