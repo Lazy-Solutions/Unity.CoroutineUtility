@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace Lazy.Utility
@@ -15,6 +16,21 @@ namespace Lazy.Utility
 
         /// <summary>Gets whatever <see cref="MainThreadUtility"/> is enabled, set to <see langword="false"/> in source code to disable.</summary>
         public static bool isEnabled => true;
+
+        static GlobalCoroutine coroutine;
+
+        static int mainThreadID;
+
+        /// <summary>Gets if the thread we're currently on is the main thread.</summary>
+        public static bool isOnMainThread =>
+            Thread.CurrentThread.ManagedThreadId == mainThreadID;
+
+        [RuntimeInitializeOnLoadMethod]
+        static void OnLoad()
+        {
+            mainThreadID = Thread.CurrentThread.ManagedThreadId;
+            Start();
+        }
 
         #region Invoke
 
@@ -51,22 +67,16 @@ namespace Lazy.Utility
             if (action == null)
                 return;
 
-            if (mainThread)
+            if (!mainThread || isOnMainThread)
+                action.Invoke();
+            else
                 lock (executeOnMainThread)
                     executeOnMainThread.Add(action);
-            else
-                action.Invoke();
 
         }
 
         #endregion
         #region Coroutine
-
-        static GlobalCoroutine coroutine;
-
-        [RuntimeInitializeOnLoadMethod]
-        static void OnLoad() =>
-            Start();
 
         /// <summary>Starts main thread utility coroutine.</summary>
         public static void Start()
