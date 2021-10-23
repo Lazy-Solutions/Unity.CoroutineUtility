@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using UnityEngine;
 using System.Collections.Generic;
+using System;
+using System.Reflection;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -36,7 +38,10 @@ namespace Lazy.Utility
         public void Add(IEnumerator enumerator, GlobalCoroutine coroutine)
         {
             m_coroutines.Add(coroutine, null);
-            Run(enumerator, coroutine);
+            m_coroutines[coroutine] = StartCoroutine(RunCoroutine(
+                enumerator,
+                coroutine,
+                onDone: () => m_coroutines.Remove(coroutine)));
         }
 
         public void Clear()
@@ -55,76 +60,91 @@ namespace Lazy.Utility
             }
         }
 
-        public void Run(IEnumerator enumerator, GlobalCoroutine coroutine)
+        public static IEnumerator RunCoroutine(IEnumerator c, GlobalCoroutine coroutine, Action onDone = null)
         {
 
-            m_coroutines[coroutine] = StartCoroutine(RunCoroutine(enumerator));
+            coroutine.OnStart();
 
-            IEnumerator RunCoroutine(IEnumerator c)
+            object rootUserData = null;
+            if (CoroutineUtility.Events.enableEvents)
+            {
+                CoroutineUtility.Events.onCoroutineStarted?.Invoke(coroutine);
+                rootUserData = CoroutineUtility.Events.onSubroutineStart?.Invoke(coroutine, null, level: 0, null, isPause: false);
+            }
+
+            yield return RunSub(c, 0, rootUserData);
+
+            onDone?.Invoke();
+
+            if (CoroutineUtility.Events.enableEvents)
+            {
+                CoroutineUtility.Events.onSubroutineEnd(coroutine, rootUserData);
+                CoroutineUtility.Events.onCoroutineEnded(coroutine);
+            }
+
+            coroutine.Stop(isCancel: false);
+
+            IEnumerator RunSub(IEnumerator sub, int level, object parentUserData)
             {
 
-                coroutine.OnStart();
-
-                object rootUserData = null;
-                if (CoroutineUtility.Events.enableEvents)
-                {
-                    CoroutineUtility.Events.onCoroutineStarted?.Invoke(coroutine);
-                    rootUserData = CoroutineUtility.Events.onSubroutineStart?.Invoke(coroutine, null, level: 0, null, isPause: false);
-                }
-
-                yield return RunSub(c, 0, rootUserData);
-
-                m_coroutines.Remove(coroutine);
-
-                if (CoroutineUtility.Events.enableEvents)
-                {
-                    CoroutineUtility.Events.onSubroutineEnd(coroutine, rootUserData);
-                    CoroutineUtility.Events.onCoroutineEnded(coroutine);
-                }
-
-                coroutine.Stop(isCancel: false);
-
-                IEnumerator RunSub(IEnumerator sub, int level, object parentUserData)
+                while (sub.MoveNext())
                 {
 
-                    while (sub.MoveNext())
+                    if (coroutine.isComplete)
+                        yield break;
+
+                    if (coroutine.isPaused)
                     {
 
-                        if (coroutine.isComplete)
-                            yield break;
-
-                        if (coroutine.isPaused)
-                        {
-
-                            var pauseUserData = CoroutineUtility.Events.enableEvents
-                                ? CoroutineUtility.Events.onSubroutineStart?.Invoke(coroutine, null, level, parentUserData, isPause: true)
-                                : null;
-
-                            while (coroutine.isPaused)
-                                yield return null;
-
-                            if (CoroutineUtility.Events.enableEvents)
-                                CoroutineUtility.Events.onSubroutineEnd?.Invoke(coroutine, pauseUserData);
-
-                        }
-
-                        var userData = CoroutineUtility.Events.enableEvents
-                            ? CoroutineUtility.Events.onSubroutineStart?.Invoke(coroutine, sub.Current, level + 1, parentUserData, isPause: false)
+                        var pauseUserData = CoroutineUtility.Events.enableEvents
+                            ? CoroutineUtility.Events.onSubroutineStart?.Invoke(coroutine, null, level, parentUserData, isPause: true)
                             : null;
 
-                        if (sub.Current is IEnumerator subroutine)
-                            yield return RunSub(subroutine, level + 1, userData);
-                        else
-                            yield return sub.Current;
+                        while (coroutine.isPaused)
+                            yield return null;
 
                         if (CoroutineUtility.Events.enableEvents)
-                            CoroutineUtility.Events.onSubroutineEnd?.Invoke(coroutine, userData);
+                            CoroutineUtility.Events.onSubroutineEnd?.Invoke(coroutine, pauseUserData);
 
                     }
+
+                    var userData = CoroutineUtility.Events.enableEvents
+                        ? CoroutineUtility.Events.onSubroutineStart?.Invoke(coroutine, sub.Current, level + 1, parentUserData, isPause: false)
+                        : null;
+
+                    if (sub.Current is IEnumerator subroutine)
+                        yield return RunSub(subroutine, level + 1, userData);
+                    else
+                        yield return ConvertRuntimeYieldInstructionsToEditor(sub.Current);
+
+                    if (CoroutineUtility.Events.enableEvents)
+                        CoroutineUtility.Events.onSubroutineEnd?.Invoke(coroutine, userData);
 
                 }
 
             }
+
+        }
+
+        static Type EditorWaitForSecondsType { get; } =
+            Type.GetType($"Unity.EditorCoroutines.Editor.EditorWaitForSeconds, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
+
+        static object ConvertRuntimeYieldInstructionsToEditor(object obj)
+        {
+
+#if UNITY_EDITOR
+
+            if (Application.isPlaying || EditorWaitForSecondsType == null)
+                return obj;
+
+            if (obj is WaitForSeconds waitForSeconds && typeof(WaitForSeconds).GetField("m_Seconds", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance)?.GetValue(waitForSeconds) is float time)
+                return Activator.CreateInstance(EditorWaitForSecondsType, new object[] { time });
+            else if (obj is WaitForSecondsRealtime waitForSecondsRealtime)
+                return Activator.CreateInstance(EditorWaitForSecondsType, new object[] { waitForSecondsRealtime.waitTime });
+
+#endif
+
+            return obj;
 
         }
 

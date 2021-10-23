@@ -86,6 +86,31 @@ namespace Lazy.Utility
 
         }
 
+        /// <summary>Runs the action after the specified time.</summary>
+        public static void Run(Action action, TimeSpan after) =>
+            Run(action, (float)after.TotalSeconds);
+
+        /// <summary>Runs the action after the specified time.</summary>
+        public static void Run(Action action, float? after = null, bool nextFrame = false, Func<bool> when = null)
+        {
+
+            Coroutine()?.StartCoroutine();
+            IEnumerator Coroutine()
+            {
+
+                if (after.HasValue)
+                    yield return new WaitForSeconds(after.Value);
+                else if (nextFrame)
+                    yield return null;
+                else if (when != null && !when.Invoke())
+                    yield return null;
+
+                action?.Invoke();
+
+            }
+
+        }
+
         /// <summary>
         /// <para>Runs the coroutine using <see cref="CoroutineUtility"/>, which means it won't be tied to this <see cref="MonoBehaviour"/> and will persist through scene close.</para>
         /// <para>You may yield return this method.</para>
@@ -100,14 +125,27 @@ namespace Lazy.Utility
         public static GlobalCoroutine StartCoroutine(this IEnumerator coroutine, Action onComplete = null, string description = "", [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0)
         {
 
-            if (!Application.isPlaying)
-                return null;
-
             if (coroutine == null)
                 return null;
 
+            if (!MainThreadUtility.isOnMainThread && Application.isPlaying)
+                return MainThreadUtility.Invoke(() => StartCoroutine(coroutine, onComplete, description, callerFile, callerLine));
+
             var c = GlobalCoroutine.Get(onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), description);
-            Runner().Add(coroutine, c);
+
+            if (Application.isPlaying)
+                Runner().Add(coroutine, c);
+            else
+            {
+
+                //If com.unity.editorcoroutines is installed, then we'll use that to provide editor functionality
+                //Unity.EditorCoroutines.EditorCoroutineUtility.StartCoroutineOwnerless(IEnumerator);
+
+                var type = Type.GetType("Unity.EditorCoroutines.Editor.EditorCoroutineUtility, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
+                var method = type?.GetMethod("StartCoroutineOwnerless");
+                method?.Invoke(null, new[] { CoroutineRunner.RunCoroutine(coroutine, c) });
+
+            }
 
             return c;
 
@@ -131,11 +169,15 @@ namespace Lazy.Utility
         static MethodBase GetCaller()
         {
 
+#if UNITY_WEBGL
+            return null;
+#else
             var stackTrace = new StackTrace();
             var stackFrames = stackTrace.GetFrames();
             var callingFrame = stackFrames[2];
 
             return callingFrame.GetMethod();
+#endif
 
         }
 
