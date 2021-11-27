@@ -79,6 +79,12 @@ namespace Lazy.Utility
             if (m_runner)
                 return m_runner;
 
+            if (Object.FindObjectOfType<CoroutineRunner>() is CoroutineRunner runner && runner)
+            {
+                m_runner = runner;
+                return m_runner;
+            }
+
             var obj = new GameObject("Coroutine runner");
             Object.DontDestroyOnLoad(obj);
             m_runner = obj.AddComponent<CoroutineRunner>();
@@ -128,9 +134,6 @@ namespace Lazy.Utility
             if (coroutine == null)
                 return null;
 
-            if (!MainThreadUtility.isOnMainThread && Application.isPlaying)
-                return MainThreadUtility.Invoke(() => StartCoroutine(coroutine, onComplete, description, callerFile, callerLine));
-
             var c = GlobalCoroutine.Get(onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), description);
 
             if (Application.isPlaying)
@@ -139,8 +142,8 @@ namespace Lazy.Utility
             {
 
                 //If com.unity.editorcoroutines is installed, then we'll use that to provide editor functionality
-                //Unity.EditorCoroutines.EditorCoroutineUtility.StartCoroutineOwnerless(IEnumerator);
 
+                //Unity.EditorCoroutines.EditorCoroutineUtility.StartCoroutineOwnerless(IEnumerator);
                 var type = Type.GetType("Unity.EditorCoroutines.Editor.EditorCoroutineUtility, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
                 var method = type?.GetMethod("StartCoroutineOwnerless");
                 method?.Invoke(null, new[] { CoroutineRunner.RunCoroutine(coroutine, c) });
