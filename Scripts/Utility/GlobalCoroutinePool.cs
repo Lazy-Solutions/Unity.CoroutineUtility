@@ -32,7 +32,7 @@ namespace Lazy.Utility
             if (pool.Contains(null))
                 pool.RemoveAll(obj => obj == null);
 
-            if (pool.Any())
+            if (pool.Count > 0)
             {
                 coroutine = pool[0];
                 pool.RemoveAt(0);
