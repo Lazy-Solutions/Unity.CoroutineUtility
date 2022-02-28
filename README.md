@@ -8,8 +8,8 @@ https://github.com/Lazy-Solutions/Unity.CoroutineUtility.git
 ```
 </br>
 
-> Using [Advanced Scene Manager](https://github.com/Lazy-Solutions/advanced-scene-manager)?\
-> Coroutine Utility is already added as a dependency to Advanced Scene Manager, so no need to download this separately.
+> Using [Advanced Scene Manager](https://github.com/Lazy-Solutions/AdvancedSceneManager)?\
+> Coroutine Utility is a dependency of [Advanced Scene Manager](https://github.com/Lazy-Solutions/AdvancedSceneManager), so no need to download this separately.
 
 ###### CoroutineUtility
 Run coroutines detached from MonoBehaviours and scenes which makes working with coroutines in certain circumstances a lot easier.

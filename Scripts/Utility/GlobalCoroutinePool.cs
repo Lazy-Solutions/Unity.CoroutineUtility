@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -8,6 +8,8 @@ namespace Lazy.Utility
 
     internal static class GlobalCoroutinePool
     {
+
+        static readonly object @lock = new object();
 
         static readonly List<GlobalCoroutine> pool = new List<GlobalCoroutine>();
 
@@ -20,26 +22,34 @@ namespace Lazy.Utility
         }
 
         //Called by GlobalCoroutine finalizer
-        internal static void ReturnToPool(GlobalCoroutine coroutine) =>
-            pool.Add(coroutine);
+        internal static void ReturnToPool(GlobalCoroutine coroutine)
+        {
+            lock (@lock)
+                pool.Add(coroutine);
+        }
 
         //Retreive or create instance
         static void Get(out GlobalCoroutine coroutine)
         {
 
-            coroutine = null;
-
-            if (pool.Contains(null))
-                pool.RemoveAll(obj => obj == null);
-
-            if (pool.Any())
+            lock (@lock)
             {
-                coroutine = pool[0];
-                pool.RemoveAt(0);
-            }
 
-            if (coroutine is null)
-                coroutine = new GlobalCoroutine();
+                coroutine = null;
+
+                if (pool.Contains(null))
+                    _ = pool.RemoveAll(obj => obj == null);
+
+                if (pool.Any())
+                {
+                    coroutine = pool[0];
+                    pool.RemoveAt(0);
+                }
+
+                if (coroutine is null)
+                    coroutine = new GlobalCoroutine();
+
+            }
 
         }
 
