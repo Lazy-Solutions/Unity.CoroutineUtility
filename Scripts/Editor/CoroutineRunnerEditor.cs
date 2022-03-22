@@ -1,7 +1,6 @@
 ﻿#if UNITY_EDITOR
 
 using System.Collections.Generic;
-using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,7 +17,7 @@ namespace Lazy.Utility.Editor
         void OnDisable() =>
             CoroutineRunner.OnListChanged -= Repaint;
 
-        static readonly Dictionary<(MethodBase method, string file, int line), bool> expanded = new Dictionary<(MethodBase method, string file, int line), bool>();
+        static readonly Dictionary<GlobalCoroutine, bool> expanded = new Dictionary<GlobalCoroutine, bool>();
 
         public override void OnInspectorGUI()
         {
@@ -36,8 +35,8 @@ namespace Lazy.Utility.Editor
         void DrawCoroutine(GlobalCoroutine coroutine)
         {
 
-            if (!expanded.ContainsKey(coroutine.caller))
-                expanded.Add(coroutine.caller, false);
+            if (!expanded.ContainsKey(coroutine))
+                expanded.Add(coroutine, false);
 
             var header = string.IsNullOrWhiteSpace(coroutine.description)
                     ? coroutine.caller.method?.Name
@@ -47,11 +46,11 @@ namespace Lazy.Utility.Editor
                 header += " [Paused]";
 
             _ = EditorGUILayout.BeginHorizontal();
-            expanded[coroutine.caller] = EditorGUILayout.BeginFoldoutHeaderGroup(
-                foldout: expanded[coroutine.caller],
+            expanded[coroutine] = EditorGUILayout.BeginFoldoutHeaderGroup(
+                foldout: expanded[coroutine],
                 content: header);
 
-            if (expanded[coroutine.caller])
+            if (expanded[coroutine])
             {
 
                 if (!coroutine.isPaused && GUILayout.Button("Pause", GUILayout.ExpandWidth(false)))
