@@ -61,10 +61,8 @@ namespace Lazy.Utility
             /// <summary>Occurs when a <see cref="GlobalCoroutine"/> is ended.</summary>
             public static CoroutineEvent onCoroutineEnded;
 
-            /// <summary>
-            /// <para>Occurs before a subroutine in an executing <see cref="GlobalCoroutine"/> is started.</para>
-            /// <para>A user object can be returned, which is then passed to <see cref="onSubroutineEnd"/>.</para>
-            /// </summary>
+            /// <summary>Occurs before a subroutine in an executing <see cref="GlobalCoroutine"/> is started.</summary>
+            /// <remarks>A user object can be returned, which is then passed to <see cref="onSubroutineEnd"/>.</remarks>
             public static CoroutineFrameStartEvent onSubroutineStart;
 
             /// <summary>Occurs when a subroutine in an executing <see cref="GlobalCoroutine"/> has ended.</summary>
@@ -93,14 +91,22 @@ namespace Lazy.Utility
         }
 
         /// <summary>Runs the action after the specified time.</summary>
-        public static void Run(Action action, TimeSpan after) =>
-            Run(action, (float)after.TotalSeconds);
+        public static void Run(Action action, TimeSpan after, [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0, [CallerMemberName] string callerName = "") =>
+            Run(action, after: (float)after.TotalSeconds, false, null, callerFile, callerLine, callerName);
 
         /// <summary>Runs the action after the specified time.</summary>
-        public static void Run(Action action, float? after = null, bool nextFrame = false, Func<bool> when = null)
+        public static void Run(Action action, float? after = null, bool nextFrame = false, Func<bool> when = null, [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0, [CallerMemberName] string callerName = "")
         {
 
-            Coroutine()?.StartCoroutine();
+            var desc = "Run: " + callerName + "()";
+            if (after.HasValue)
+                desc += ", " + after.Value + "s";
+            else if (nextFrame)
+                desc += ", next frame";
+            else if (when != null)
+                desc += ", when condition is true";
+
+            _ = Coroutine()?.StartCoroutine(null, desc, callerFile, callerLine);
             IEnumerator Coroutine()
             {
 
@@ -117,17 +123,12 @@ namespace Lazy.Utility
 
         }
 
-        /// <summary>
-        /// <para>Runs the coroutine using <see cref="CoroutineUtility"/>, which means it won't be tied to this <see cref="MonoBehaviour"/> and will persist through scene close.</para>
-        /// <para>You may yield return this method.</para>
-        /// </summary>
+        /// <summary>Runs the coroutine using <see cref="CoroutineUtility"/>, which means it won't be tied to a <see cref="MonoBehaviour"/> and will persist through scene close.</summary>
+        /// <remarks>You may yield return this method.</remarks>
         public static GlobalCoroutine StartCoroutineGlobal(this MonoBehaviour _, IEnumerator coroutine, Action onComplete = null, string description = "", [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0) =>
             StartCoroutine(coroutine, onComplete, description, callerFile, callerLine);
 
-        /// <summary>
-        /// <para>Runs the coroutine using <see cref="CoroutineUtility"/>, which means it won't be tied to this <see cref="MonoBehaviour"/> and will persist through scene close.</para>
-        /// <para>You may yield return this method.</para>
-        /// </summary>
+        /// <inheritdoc cref="StartCoroutineGlobal(MonoBehaviour, IEnumerator, Action, string, string, int)"/>
         public static GlobalCoroutine StartCoroutine(this IEnumerator coroutine, Action onComplete = null, string description = "", [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0)
         {
 
@@ -146,7 +147,7 @@ namespace Lazy.Utility
                 //Unity.EditorCoroutines.EditorCoroutineUtility.StartCoroutineOwnerless(IEnumerator);
                 var type = Type.GetType("Unity.EditorCoroutines.Editor.EditorCoroutineUtility, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
                 var method = type?.GetMethod("StartCoroutineOwnerless");
-                method?.Invoke(null, new[] { CoroutineRunner.RunCoroutine(coroutine, c) });
+                _ = (method?.Invoke(null, new[] { CoroutineRunner.RunCoroutine(coroutine, c) }));
 
             }
 

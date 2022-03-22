@@ -12,10 +12,11 @@ namespace Lazy.Utility.Editor
     internal class CoroutineRunnerEditor : UnityEditor.Editor
     {
 
-        void OnEnable() => CoroutineUtility.Events.onCoroutineStarted += CoroutineUtility_coroutineCompleted;
-        void OnDisable() => CoroutineUtility.Events.onCoroutineEnded -= CoroutineUtility_coroutineCompleted;
+        void OnEnable() =>
+            CoroutineRunner.OnListChanged += Repaint;
 
-        void CoroutineUtility_coroutineCompleted(GlobalCoroutine couroutine) => Repaint();
+        void OnDisable() =>
+            CoroutineRunner.OnListChanged -= Repaint;
 
         static readonly Dictionary<(MethodBase method, string file, int line), bool> expanded = new Dictionary<(MethodBase method, string file, int line), bool>();
 
@@ -45,7 +46,7 @@ namespace Lazy.Utility.Editor
             if (coroutine.isPaused)
                 header += " [Paused]";
 
-            EditorGUILayout.BeginHorizontal();
+            _ = EditorGUILayout.BeginHorizontal();
             expanded[coroutine.caller] = EditorGUILayout.BeginFoldoutHeaderGroup(
                 foldout: expanded[coroutine.caller],
                 content: header);
