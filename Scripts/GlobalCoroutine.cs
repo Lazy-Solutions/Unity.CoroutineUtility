@@ -26,7 +26,7 @@ namespace Lazy.Utility
             ConstructInternal(null, default, null, isDestroy: true);
 
         /// <summary>'Constructs' an instance of <see cref="GlobalCoroutine"/>, <see cref="GlobalCoroutine"/> is pooled using <see cref="GlobalCoroutinePool"/>, this means the instances are recycled, so instead of using constructor, we call this.</summary>
-        internal void Construct(Action onComplete, (MethodBase method, string file, int line) caller, string description/*, bool enableDiag = false*/) =>
+        internal void Construct(Action onComplete, (MethodBase method, string file, int line) caller, string description) =>
             ConstructInternal(onComplete, caller, description, isDestroy: false);
 
         void ConstructInternal(Action onComplete, (MethodBase method, string file, int line) caller, string description, bool isDestroy)
@@ -44,12 +44,6 @@ namespace Lazy.Utility
                     CoroutineUtility.Events.onCreated?.Invoke(this);
                 else if (isDestroy)
                     CoroutineUtility.Events.onDestroyed?.Invoke(this);
-
-            //#if UNITY_EDITOR
-            //            diag = enableDiag.HasValue
-            //                ? new CoroutineDiagHelper(enableDiag.Value, (caller.method, caller.file, caller.line, debugText))
-            //                : null;
-            //#endif
 
         }
 
