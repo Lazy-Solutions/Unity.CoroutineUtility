@@ -32,6 +32,9 @@ namespace Lazy.Utility
 
 #endif
 
+        /// <summary>Occurs when a coroutine is added or removed.</summary>
+        public static event Action OnListChanged;
+
         readonly Dictionary<GlobalCoroutine, Coroutine> m_coroutines = new Dictionary<GlobalCoroutine, Coroutine>();
         public IReadOnlyCollection<GlobalCoroutine> coroutines => m_coroutines.Keys;
 
@@ -41,7 +44,12 @@ namespace Lazy.Utility
             m_coroutines[coroutine] = StartCoroutine(RunCoroutine(
                 enumerator,
                 coroutine,
-                onDone: () => m_coroutines.Remove(coroutine)));
+                onDone: () =>
+                {
+                    _ = m_coroutines.Remove(coroutine);
+                    OnListChanged?.Invoke();
+                }));
+            OnListChanged?.Invoke();
         }
 
         public void Clear()
@@ -49,6 +57,7 @@ namespace Lazy.Utility
             foreach (var coroutine in coroutines)
                 coroutine.Stop(isCancel: true);
             m_coroutines.Clear();
+            OnListChanged?.Invoke();
         }
 
         internal void Stop(GlobalCoroutine coroutine)
@@ -56,7 +65,8 @@ namespace Lazy.Utility
             if (m_coroutines.TryGetValue(coroutine, out var c))
             {
                 StopCoroutine(c);
-                m_coroutines.Remove(coroutine);
+                _ = m_coroutines.Remove(coroutine);
+                OnListChanged?.Invoke();
             }
         }
 

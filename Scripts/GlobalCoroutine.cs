@@ -144,7 +144,7 @@ namespace Lazy.Utility
                 : "Assets" + caller.file.Replace(Application.dataPath, "");
 
             if (UnityEditor.AssetDatabase.LoadAssetAtPath<Object>(relativePath))
-                UnityEditor.AssetDatabase.OpenAsset(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(relativePath), caller.line, 0);
+                _ = UnityEditor.AssetDatabase.OpenAsset(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(relativePath), caller.line, 0);
             else
                 Debug.LogError($"Could not find '{relativePath}'");
 
