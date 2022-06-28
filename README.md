@@ -27,7 +27,7 @@ void Start()
     //won't stop when scene or object is unloaded
     var coroutine = Coroutine().StartCoroutine();
 
-    //Pauses coroutine (automatically yields null until Resume())
+    //Pauses coroutine (automatically yields null until .Resume() is called)
     coroutine.Pause();
 
     //Stop coroutine
