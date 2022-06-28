@@ -12,7 +12,8 @@ https://github.com/Lazy-Solutions/Unity.CoroutineUtility.git
 > Coroutine Utility is a dependency of [Advanced Scene Manager](https://github.com/Lazy-Solutions/AdvancedSceneManager), so no need to download this separately.
 
 ###### CoroutineUtility
-Run coroutines detached from MonoBehaviours and scenes which makes working with coroutines in certain circumstances a lot easier.
+Run coroutines detached from MonoBehaviours and scenes which makes working with coroutines in certain circumstances a lot easier.\
+Supports running outside of playmode.
 
 ```csharp
 void Start()
