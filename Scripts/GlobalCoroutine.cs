@@ -109,8 +109,7 @@ namespace Lazy.Utility
             if (isComplete)
                 return;
 
-            if (CoroutineUtility.m_runner)
-                CoroutineUtility.m_runner.Stop(this);
+            CoroutineRunner.Stop(this);
 
             wasCancelled = isCancel;
             isComplete = true;
