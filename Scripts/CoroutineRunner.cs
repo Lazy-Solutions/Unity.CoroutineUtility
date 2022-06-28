@@ -3,7 +3,6 @@ using UnityEngine;
 using System.Collections.Generic;
 using System;
 using System.Reflection;
-using System.Linq;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -18,32 +17,6 @@ namespace Lazy.Utility
     {
 
 #if UNITY_EDITOR
-
-
-        [InitializeOnEnterPlayMode]
-        static void OnLoad() =>
-            Clear();
-
-        static CoroutineRunner m_instance;
-        static CoroutineRunner instance
-        {
-            get
-            {
-
-                if (!m_instance)
-                    m_instance = FindObjectOfType<CoroutineRunner>();
-
-                if (!m_instance)
-                    m_instance = new GameObject("Coroutine Runner").AddComponent<CoroutineRunner>();
-
-                m_instance.gameObject.hideFlags = Application.isPlaying ? HideFlags.DontSave : HideFlags.HideAndDontSave;
-                if (Application.isPlaying)
-                    DontDestroyOnLoad(m_instance.gameObject);
-
-                return m_instance;
-
-            }
-        }
 
         void Start()
         {
@@ -65,39 +38,39 @@ namespace Lazy.Utility
         readonly Dictionary<GlobalCoroutine, Coroutine> m_coroutines = new Dictionary<GlobalCoroutine, Coroutine>();
         public IReadOnlyCollection<GlobalCoroutine> coroutines => m_coroutines.Keys;
 
-        public static void Add(IEnumerator enumerator, GlobalCoroutine coroutine)
+        public void Add(IEnumerator enumerator, GlobalCoroutine coroutine)
         {
-            instance.m_coroutines.Add(coroutine, null);
-            instance.m_coroutines[coroutine] = instance.StartCoroutine(instance.RunCoroutine(
+            m_coroutines.Add(coroutine, null);
+            m_coroutines[coroutine] = StartCoroutine(RunCoroutine(
                 enumerator,
                 coroutine,
                 onDone: () =>
                 {
-                    _ = instance.m_coroutines.Remove(coroutine);
+                    _ = m_coroutines.Remove(coroutine);
                     OnListChanged?.Invoke();
                 }));
             OnListChanged?.Invoke();
         }
 
-        public static void Clear()
+        public void Clear()
         {
-            foreach (var coroutine in instance.coroutines.ToArray())
+            foreach (var coroutine in coroutines)
                 coroutine.Stop(isCancel: true);
-            instance.m_coroutines.Clear();
+            m_coroutines.Clear();
             OnListChanged?.Invoke();
         }
 
-        internal static void Stop(GlobalCoroutine coroutine)
+        internal void Stop(GlobalCoroutine coroutine)
         {
-            if (instance.m_coroutines.TryGetValue(coroutine, out var c))
+            if (m_coroutines.TryGetValue(coroutine, out var c))
             {
-                instance.StopCoroutine(c);
-                _ = instance.m_coroutines.Remove(coroutine);
+                StopCoroutine(c);
+                _ = m_coroutines.Remove(coroutine);
                 OnListChanged?.Invoke();
             }
         }
 
-        IEnumerator RunCoroutine(IEnumerator c, GlobalCoroutine coroutine, Action onDone = null)
+        public static IEnumerator RunCoroutine(IEnumerator c, GlobalCoroutine coroutine, Action onDone = null)
         {
 
             coroutine.OnStart();
@@ -163,10 +136,10 @@ namespace Lazy.Utility
 
         }
 
-        Type EditorWaitForSecondsType { get; } =
+        static Type EditorWaitForSecondsType { get; } =
             Type.GetType($"Unity.EditorCoroutines.Editor.EditorWaitForSeconds, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
 
-        object ConvertRuntimeYieldInstructionsToEditor(object obj)
+        static object ConvertRuntimeYieldInstructionsToEditor(object obj)
         {
 
 #if UNITY_EDITOR

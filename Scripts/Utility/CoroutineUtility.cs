@@ -6,13 +6,89 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Lazy.Utility
 {
 
     /// <summary>An utility class that helps with running coroutines detached from <see cref="MonoBehaviour"/>.</summary>
-    public static partial class CoroutineUtility
+    public static class CoroutineUtility
     {
+
+        /// <summary>Provides events for coroutine events.</summary>
+        public static class Events
+        {
+
+            static bool m_enableEvents;
+            /// <summary>Enables or disables events. Setter not available, and getter always returns false, in build. Default is <see langword="false"/>.</summary>
+            public static bool enableEvents
+            {
+                get
+                {
+#if UNITY_EDITOR
+                    return m_enableEvents;
+#else
+                    return false;
+#endif
+                }
+#if UNITY_EDITOR
+                set => m_enableEvents = value;
+#endif
+            }
+
+            /// <param name="coroutine">The coroutine that this event was called for.</param>
+            public delegate void CoroutineEvent(GlobalCoroutine coroutine);
+
+            /// <param name="coroutine">The coroutine that this event was called for.</param>
+            /// <param name="data">The object returned from <see cref="IEnumerator.Current"/>.</param>
+            /// <param name="level">The level, or depth, of the current subroutine.</param>
+            /// <param name="parentUserData">The userdata of the subroutine above this one, depth-wise.</param>
+            /// <param name="isPause"><see cref="GlobalCoroutine.Pause"/> is reported as a subroutine, this is true when that is the case.</param>
+            public delegate object CoroutineFrameStartEvent(GlobalCoroutine coroutine, object data, int level, object parentUserData, bool isPause);
+
+            /// <param name="coroutine">The coroutine that this event was called for.</param>
+            /// <param name="userData">The userdata that was passed to <see cref="onSubroutineStart"/>.</param>
+            public delegate void CoroutineFrameEndEvent(GlobalCoroutine coroutine, object userData);
+
+            /// <summary>Occurs when created. Note that <see cref="GlobalCoroutine"/> is pooled, the same object instance will be used multiple times, and this event is called when the pooled instance is 'constructed', meaning this event will be called multiple times for the same object instance.</summary>
+            public static CoroutineEvent onCreated;
+
+            /// <summary>Occurs when a <see cref="GlobalCoroutine"/> is 'destroyed'. Note that <see cref="GlobalCoroutine"/> is pooled, the same object instance will be used multiple times, and this event is called when the pooled instance is 'destroyed', meaning this event will be called multiple times for the same object instance.</summary>
+            public static CoroutineEvent onDestroyed;
+
+            /// <summary>Occurs when a <see cref="GlobalCoroutine"/> is started.</summary>
+            public static CoroutineEvent onCoroutineStarted;
+            /// <summary>Occurs when a <see cref="GlobalCoroutine"/> is ended.</summary>
+            public static CoroutineEvent onCoroutineEnded;
+
+            /// <summary>Occurs before a subroutine in an executing <see cref="GlobalCoroutine"/> is started.</summary>
+            /// <remarks>A user object can be returned, which is then passed to <see cref="onSubroutineEnd"/>.</remarks>
+            public static CoroutineFrameStartEvent onSubroutineStart;
+
+            /// <summary>Occurs when a subroutine in an executing <see cref="GlobalCoroutine"/> has ended.</summary>
+            public static CoroutineFrameEndEvent onSubroutineEnd;
+
+        }
+
+        internal static CoroutineRunner m_runner;
+        static CoroutineRunner Runner()
+        {
+
+            if (m_runner)
+                return m_runner;
+
+            if (Object.FindObjectOfType<CoroutineRunner>() is CoroutineRunner runner && runner)
+            {
+                m_runner = runner;
+                return m_runner;
+            }
+
+            var obj = new GameObject("Coroutine runner");
+            Object.DontDestroyOnLoad(obj);
+            m_runner = obj.AddComponent<CoroutineRunner>();
+            return m_runner;
+
+        }
 
         /// <summary>Runs the action after the specified time.</summary>
         public static void Run(Action action, TimeSpan after, [CallerFilePath] string callerFile = "", [CallerLineNumber] int callerLine = 0, [CallerMemberName] string callerName = "") =>
@@ -61,23 +137,19 @@ namespace Lazy.Utility
 
             var c = GlobalCoroutine.Get(onComplete, (GetCaller(), callerFile.Replace("\\", "/"), callerLine), description);
 
-            //if (Application.isPlaying)
-            CoroutineRunner.Add(coroutine, c);
-            //else
-            //{
+            if (Application.isPlaying)
+                Runner().Add(coroutine, c);
+            else
+            {
 
-            //    ////If com.unity.editorcoroutines is installed, then we'll use that to provide editor functionality
+                //If com.unity.editorcoroutines is installed, then we'll use that to provide editor functionality
 
-            //    ////Unity.EditorCoroutines.EditorCoroutineUtility.StartCoroutineOwnerless(IEnumerator);
-            //    //var type = Type.GetType("Unity.EditorCoroutines.Editor.EditorCoroutineUtility, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
-            //    //var method = type?.GetMethod("StartCoroutineOwnerless");
-            //    //_ = (method?.Invoke(null, new[] { CoroutineRunner.RunCoroutine(coroutine, c) }));
+                //Unity.EditorCoroutines.EditorCoroutineUtility.StartCoroutineOwnerless(IEnumerator);
+                var type = Type.GetType("Unity.EditorCoroutines.Editor.EditorCoroutineUtility, Unity.EditorCoroutines.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null", throwOnError: false);
+                var method = type?.GetMethod("StartCoroutineOwnerless");
+                _ = (method?.Invoke(null, new[] { CoroutineRunner.RunCoroutine(coroutine, c) }));
 
-            //    //If com.unity.editorcoroutines is not installed, then we'll default to a custom one using EditorApplication.update
-            //    //if (method is null)
-            //    CoroutineRunner_Editor.Run(CoroutineRunner.RunCoroutine(coroutine, c));
-
-            //}
+            }
 
             return c;
 
@@ -119,7 +191,7 @@ namespace Lazy.Utility
 
         /// <summary>Stops all global coroutines.</summary>
         public static void StopAllCoroutines() =>
-            CoroutineRunner.Clear();
+            Runner().Clear();
 
         /// <summary>Wait for all coroutines to complete.</summary>
         public static IEnumerator WaitAll(params IEnumerator[] coroutines) =>
