@@ -9,6 +9,9 @@
     "coroutines",
     "utility"
   ],
+  "dependencies": [
+    "com.unity.editorcoroutines": "1.0.0"
+  ],
   "author": {
     "name": "Advanced Scene Manager",
     "email": "support@lazy.solutions",
