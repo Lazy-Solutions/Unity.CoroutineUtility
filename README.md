@@ -13,7 +13,7 @@ https://github.com/Lazy-Solutions/Unity.CoroutineUtility.git
 
 ###### CoroutineUtility
 Run coroutines detached from MonoBehaviours and scenes which makes working with coroutines in certain circumstances a lot easier.\
-Supports running outside of playmode.
+Supports [Editor Coroutines](https://docs.unity3d.com/Manual/com.unity.editorcoroutines.html).
 
 ```csharp
 void Start()
